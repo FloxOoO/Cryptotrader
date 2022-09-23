@@ -1,8 +1,8 @@
 const API_KEY =
   "4f90b4377134ca30e7f7435af76b95ac3497a716b5549401b16beb29fd5f3018";
 const tickersHandlers = new Map();
-const tickersInvalid = [];
 var bc = new BroadcastChannel("updatePrice");
+let connect = false;
 // На API
 // const loadTickers = () => {
 //   if (tickersHandlers.size === 0) {
@@ -34,33 +34,44 @@ const socket = new WebSocket(
 const AGGREGATE_INDEX = "5";
 const INVALID_INDEX = "500";
 socket.addEventListener("message", (e) => {
-  const {
+  let valid = true;
+  let time = 0;
+  let {
     TYPE: type,
     FROMSYMBOL: currency,
     PRICE: newPrice
   } = JSON.parse(e.data);
+  if (type === AGGREGATE_INDEX && newPrice !== undefined) {
+    time =
+      new Date(e.timeStamp).getSeconds() * 1000 +
+      new Date(e.timeStamp).getMilliseconds();
+  }
   if (type === INVALID_INDEX) {
     const { PARAMETER: tickerRequest } = JSON.parse(e.data);
-    tickersInvalid.push(tickerRequest.split("").slice(9, -4).join(""));
+    currency = tickerRequest.split("").slice(9, -4).join("");
+    valid = false;
   }
   if (
     (type !== AGGREGATE_INDEX && type !== INVALID_INDEX) ||
-    newPrice === undefined
+    (type === AGGREGATE_INDEX && newPrice === undefined)
   ) {
     return;
   }
   const handlers = tickersHandlers.get(currency) ?? [];
   handlers.forEach((fn) => {
-    fn(newPrice);
-    bc.postMessage({ currency, newPrice });
+    fn(newPrice, valid, time);
+    bc.postMessage({ currency, newPrice, valid });
+    connect = true;
   });
 });
-bc.onmessage = (e) => {
-  const handlers = tickersHandlers.get(e.data.currency) ?? [];
-  handlers.forEach((fn) => {
-    fn(e.data.newPrice);
-  });
-};
+if (connect === false) {
+  bc.onmessage = (e) => {
+    const handlers = tickersHandlers.get(e.data.currency) ?? [];
+    handlers.forEach((fn) => {
+      fn(e.data.newPrice, e.data.valid);
+    });
+  };
+}
 function sendToWebSocket(message) {
   const stringifiedMessage = JSON.stringify(message);
   if (socket.readyState === WebSocket.OPEN) {
@@ -102,7 +113,4 @@ export const loadCoinlist = (Coinlist) => {
     .then((rawData) =>
       Object.keys(rawData.Data).forEach((key) => Coinlist.push(key))
     );
-};
-export const getTickersInvalid = () => {
-  return tickersInvalid;
 };

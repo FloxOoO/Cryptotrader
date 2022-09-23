@@ -82,7 +82,6 @@
           Добавить
         </button>
       </section>
-
       <template v-if="tickers.length">
         <hr class="w-full border-t border-gray-600 my-2" />
         <div>
@@ -118,10 +117,9 @@
           <template v-for="t in paginatedTickers" :key="t.name">
             <div
               @click="select(t)"
-              :class="{
-                'border-4': selectedTicker === t
-              }"
-              class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
+              :class="`${selectedTicker === t ? 'border-4' : ''} ${
+                !t.valid ? 'bg-red-100' : 'bg-white'
+              } overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer`"
             >
               <div class="px-4 py-5 sm:p-6 text-center">
                 <dt class="text-sm font-medium text-gray-500 truncate">
@@ -159,14 +157,19 @@
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
           {{ selectedTicker.name }} - USD
         </h3>
-        <div class="flex items-end border-gray-600 border-b border-l h-64">
+        <div
+          ref="graph"
+          class="flex items-end border-gray-600 border-b border-l h-64"
+        >
           <div
+            ref="graphBar"
             v-for="(bar, idx) in normalizedGraph"
             :key="idx"
             :style="{
-              height: `${bar}%`
+              height: `${bar.height}%`,
+              width: `${bar.width}px`
             }"
-            class="bg-purple-800 border w-10"
+            class="bg-purple-800 border"
           ></div>
         </div>
         <button
@@ -202,25 +205,20 @@
 </template>
 <script>
 // [x] Наличие в состоянии ЗАВИСИМЫХ ДАННЫХ | 5+
-// [ ] При удалении остается подписка на загрузку тикера | 5/5
-// [ ] Запросы напрямую внутри компонента | 5/5
-// [ ] Обработка ошибок API | 5/5
-// [ ] Количество запросов | 4/5
+// [x] При удалении остается подписка на загрузку тикера | 5/5
+// [x] Запросы напрямую внутри компонента | 5/5
+// [x] Обработка ошибок API | 5/5
+// [x] Количество запросов | 4/5
 // [x] При удалении тикера не изменяется localStorage | 4/5
 // [x] Одинаковый код в watch | 3/5
 // [ ] localStorage и анонимные вкладки | 3/5
-// [ ] График ужасно выглядит если много цен | 2/5
+// [x] График ужасно выглядит если много цен | 2/5
 // [ ] Магические строки и числа (URL, 5000 мс задержка, ключ localStorage, количество на странице) | 1/5
 // Доп
 // [x] График сломан если везде одинаковые значения
 // [x] При удалении тикера остается выбор
 // [x] Крутые вебсокеты на бродкаст чаннел ебать с русланом
-import {
-  subscribeToTicker,
-  unsubscribeFromTicker,
-  loadCoinlist,
-  getTickersInvalid
-} from "./api";
+import { subscribeToTicker, unsubscribeFromTicker, loadCoinlist } from "./api";
 export default {
   name: "App",
   data() {
@@ -234,7 +232,10 @@ export default {
       Coinlist: [],
       wordsHelpSearch: [],
       preloaderShow: true,
-      addTickerCheck: false
+      addTickerCheck: false,
+      maxGraphElements: 1,
+      widthGraph: 1,
+      countBar: 1
     };
   },
   created() {
@@ -252,25 +253,54 @@ export default {
     if (tickersData) {
       this.tickers = JSON.parse(tickersData);
       this.tickers.forEach((ticker) => {
-        subscribeToTicker(ticker.name, (newPrice) =>
-          this.updateTicker(ticker.name, newPrice)
+        subscribeToTicker(ticker.name, (newPrice, valid, time) =>
+          this.updateTicker(ticker.name, newPrice, valid, time)
         );
       });
     }
-    setInterval(this.updateTickers, 5000);
+    // setInterval(this.updateTickers, 5000);
   },
   mounted() {
     this.loadPage();
+    window.addEventListener("resize", this.resizeGraph);
+  },
+  beforeMount() {
+    window.removeEventListener("resize", this.resizeGraph);
   },
   methods: {
-    updateTicker(tickerName, price) {
+    resizeGraph() {
+      if (!this.$refs.graph) {
+        return;
+      }
+      this.maxGraphElements = this.$refs.graph.clientWidth / this.widthBar;
+      if (this.graph.length > this.maxGraphElements) {
+        this.graph = this.graph.slice(
+          this.graph.length - this.maxGraphElements
+        );
+      }
+    },
+    updateTicker(tickerName, price, valid, time) {
       this.tickers
         .filter((t) => t.name === tickerName)
         .forEach((t) => {
           if (t === this.selectedTicker) {
-            this.graph.push(price);
+            this.graph.push({ height: price, width: time });
+            if (this.$refs.graphBar) {
+              this.widthGraph = 0;
+              this.countBar = 0;
+              this.$refs.graphBar.forEach((x) => {
+                this.widthGraph += Math.ceil(x.clientWidth) + 2;
+                this.countBar++;
+              });
+            }
+            if (this.$refs.graph.clientWidth < this.widthGraph) {
+              this.graph.shift();
+            }
           }
-          t.price = price;
+          if (valid === true) {
+            t.price = price;
+          }
+          t.valid = valid;
         });
     },
     formatPrice(price) {
@@ -282,7 +312,8 @@ export default {
     add(tickerName) {
       const currentTicker = {
         name: tickerName.toUpperCase(),
-        price: "-"
+        price: "-",
+        valid: true
       };
       this.addTickerCheck = this.tickers.some(
         (x) => x.name === tickerName.toUpperCase()
@@ -293,8 +324,8 @@ export default {
       }
       this.filter = "";
       this.tickers = [...this.tickers, currentTicker];
-      subscribeToTicker(currentTicker.name, (newPrice) =>
-        this.updateTicker(currentTicker.name, newPrice)
+      subscribeToTicker(currentTicker.name, (newPrice, valid, time) =>
+        this.updateTicker(currentTicker.name, newPrice, valid, time)
       );
       this.ticker = "";
     },
@@ -377,14 +408,38 @@ export default {
       return this.filteredTickers.length > this.endIndex;
     },
     normalizedGraph() {
-      const maxValue = Math.max(...this.graph);
-      const minValue = Math.min(...this.graph);
-      if (maxValue === minValue) {
-        return this.graph.map(() => 50);
+      let price = [];
+      let normalizedGraph = [];
+      this.graph.forEach((x) => {
+        price.push(Object.entries(x)[0][1]);
+      });
+      const maxValueH = Math.max(...price);
+      const minValueH = Math.min(...price);
+      if (maxValueH === minValueH) {
+        return this.graph.map((x) => (Object.entries(x)[0][1] = 50));
       }
-      return this.graph.map(
-        (price) => 5 + ((price - minValue) * 95) / (maxValue - minValue)
+      price = price.map(
+        (x) => 5 + ((x - minValueH) * 95) / (maxValueH - minValueH)
       );
+      this.searchIntervalTime.forEach((x, idx) => {
+        normalizedGraph.push(
+          Object.fromEntries([
+            ["height", price[idx]],
+            ["width", x > 100 ? x / 100 : 10]
+          ])
+        );
+      });
+      return normalizedGraph;
+    },
+    searchIntervalTime() {
+      let intervals = [];
+      for (let i = 0; i < this.graph.length - 1; i++) {
+        intervals.push(
+          Object.entries(this.graph[i + 1])[1][1] -
+            Object.entries(this.graph[i])[1][1]
+        );
+      }
+      return intervals;
     },
     pageStateOptions() {
       return {
@@ -392,8 +447,8 @@ export default {
         page: this.page
       };
     },
-    tickersInvalid() {
-      return getTickersInvalid();
+    widthBar() {
+      return this.widthGraph / this.countBar;
     }
   }
 };
