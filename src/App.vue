@@ -294,7 +294,7 @@ export default {
               });
             }
             if (this.$refs.graph.clientWidth < this.widthGraph) {
-              this.graph.shift();
+              this.graph.shift(); 
             }
           }
           if (valid === true) {
