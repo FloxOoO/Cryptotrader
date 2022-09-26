@@ -27,61 +27,11 @@
     </div>
     <div class="container">
       <div class="w-full my-4"></div>
-      <section>
-        <div class="flex">
-          <div class="max-w-xs">
-            <label
-              for="wallet"
-              class="h1 block text-sm font-medium text-gray-700"
-              >Тикер</label
-            >
-            <div class="mt-1 relative rounded-md shadow-md">
-              <input
-                v-model="ticker"
-                v-on:keydown.enter="add(ticker)"
-                type="text"
-                name="wallet"
-                id="wallet"
-                class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
-                placeholder="Например DOGE"
-              />
-            </div>
-            <template v-if="wordsHelpSearch.length">
-              <span
-                v-for="(span, idx) in wordsHelpSearch"
-                :key="idx"
-                @click="add(span)"
-                class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-              >
-                {{ span }}
-              </span>
-            </template>
-            <div v-if="addTickerCheck" class="text-sm text-red-600">
-              Такой тикер уже добавлен
-            </div>
-          </div>
-        </div>
-        <button
-          @click="add(ticker)"
-          type="button"
-          class="my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-        >
-          <!-- Heroicon name: solid/mail -->
-          <svg
-            class="-ml-0.5 mr-2 h-6 w-6"
-            xmlns="http://www.w3.org/2000/svg"
-            width="30"
-            height="30"
-            viewBox="0 0 24 24"
-            fill="#ffffff"
-          >
-            <path
-              d="M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4V7zm-1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"
-            ></path>
-          </svg>
-          Добавить
-        </button>
-      </section>
+      <add-ticker
+        @add-ticker="add"
+        :disabled="tooManyTickersAdded"
+        :add-ticker-check="addTickerCheck"
+      />
       <template v-if="tickers.length">
         <hr class="w-full border-t border-gray-600 my-2" />
         <div>
@@ -218,19 +168,20 @@
 // [x] График сломан если везде одинаковые значения
 // [x] При удалении тикера остается выбор
 // [x] Крутые вебсокеты на бродкаст чаннел ебать с русланом
-import { subscribeToTicker, unsubscribeFromTicker, loadCoinlist } from "./api";
+import { subscribeToTicker, unsubscribeFromTicker } from "./api";
+import AddTicker from "./components/AddTicker.vue";
 export default {
   name: "App",
+  components: {
+    AddTicker
+  },
   data() {
     return {
-      ticker: "",
       filter: "",
       tickers: [],
       selectedTicker: null,
       graph: [],
       page: 1,
-      Coinlist: [],
-      wordsHelpSearch: [],
       preloaderShow: true,
       addTickerCheck: false,
       maxGraphElements: 1,
@@ -239,7 +190,6 @@ export default {
     };
   },
   created() {
-    Object.freeze(loadCoinlist(this.Coinlist));
     const windowData = Object.fromEntries(
       new URL(window.location).searchParams.entries()
     );
@@ -294,7 +244,7 @@ export default {
               });
             }
             if (this.$refs.graph.clientWidth < this.widthGraph) {
-              this.graph.shift(); 
+              this.graph.shift();
             }
           }
           if (valid === true) {
@@ -309,14 +259,14 @@ export default {
       }
       return price > 1 ? price.toFixed(2) : price.toPrecision(2);
     },
-    add(tickerName) {
+    add(ticker) {
       const currentTicker = {
-        name: tickerName.toUpperCase(),
+        name: ticker.toUpperCase(),
         price: "-",
         valid: true
       };
       this.addTickerCheck = this.tickers.some(
-        (x) => x.name === tickerName.toUpperCase()
+        (x) => x.name === ticker.toUpperCase()
       );
       if (this.addTickerCheck) {
         this.ticker = "";
@@ -327,7 +277,6 @@ export default {
       subscribeToTicker(currentTicker.name, (newPrice, valid, time) =>
         this.updateTicker(currentTicker.name, newPrice, valid, time)
       );
-      this.ticker = "";
     },
     handleDelete(tickerToRemove) {
       this.tickers = this.tickers.filter((t) => t !== tickerToRemove);
@@ -339,24 +288,6 @@ export default {
     select(ticker) {
       this.selectedTicker = ticker;
     },
-    HelpSearch() {
-      let Cointemp = [];
-      if (this.ticker.length) {
-        this.addTickerCheck = false;
-        this.Coinlist.forEach((coin) => {
-          if (
-            coin.split("").slice(0, this.ticker.length).join("") ===
-            this.ticker.toUpperCase()
-          ) {
-            Cointemp.push(coin);
-          }
-        });
-      }
-      Cointemp = Cointemp.filter((x) => x.includes(this.ticker.toUpperCase()));
-      this.wordsHelpSearch = Cointemp.length
-        ? [Cointemp[0], Cointemp[1], Cointemp[2], Cointemp[3]]
-        : [];
-    },
     loadPage() {
       setTimeout(() => {
         this.preloaderShow = false;
@@ -364,9 +295,9 @@ export default {
     }
   },
   watch: {
-    ticker() {
-      this.HelpSearch();
-    },
+    // ticker() {
+    //   this.HelpSearch();
+    // },
     tickers() {
       localStorage.setItem("cryptonomicon-list", JSON.stringify(this.tickers));
     },
@@ -449,6 +380,9 @@ export default {
     },
     widthBar() {
       return this.widthGraph / this.countBar;
+    },
+    tooManyTickersAdded() {
+      return this.tickers.length > 4;
     }
   }
 };
