@@ -162,11 +162,10 @@ export default {
     window.removeEventListener("resize", this.resizeGraph);
   },
   methods: {
-    paginatedTickers(t) {
-      if (t) {
-        console.log(t);
-        this.paginatedTickersData = t;
-      }
+    paginatedTickers(paginatedTickers) {
+      paginatedTickers
+        ? (this.paginatedTickersData = paginatedTickers)
+        : this.paginatedTickersData;
     },
     resizeGraph() {
       if (!this.$refs.graph) {

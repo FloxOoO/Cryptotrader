@@ -1,4 +1,10 @@
 <template>
+  <URL
+    :filter="filter"
+    :page="page"
+    @filter-from-url="filterFromUrl"
+    @page-from-url="pageFromUrl"
+  />
   <div>
     <button
       class="my-4 mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
@@ -29,7 +35,11 @@
   </div>
 </template>
 <script>
+import URL from "./URL.vue";
 export default {
+  components: {
+    URL
+  },
   props: {
     tickers: {
       type: Array,
@@ -38,9 +48,9 @@ export default {
       }
     }
   },
-  // emits: {
-  //   "processed-tickers": (value) => value
-  // },
+  emits: {
+    "processed-tickers": (value) => typeof value === "object"
+  },
   data() {
     return {
       filter: "",
@@ -48,26 +58,20 @@ export default {
     };
   },
   created() {
-    const windowData = Object.fromEntries(
-      new URL(window.location).searchParams.entries()
-    );
-    if (windowData.filter) {
-      this.filter = windowData.filter;
-    }
-    if (windowData.page) {
-      this.page = windowData.page;
+    this.filterFromUrl();
+    this.pageFromUrl();
+  },
+  methods: {
+    filterFromUrl(filter) {
+      filter ? (this.filter = filter) : this.filter;
+    },
+    pageFromUrl(page) {
+      page ? (this.page = page) : this.page;
     }
   },
   watch: {
     filter() {
       this.page = 1;
-    },
-    pageStateOptions(v) {
-      window.history.pushState(
-        null,
-        document.title,
-        `${window.location.pathname}?filter=${v.filter}&page=${v.page}`
-      );
     },
     paginatedTickers() {
       if (this.paginatedTickers.length === 0 && this.page > 1) {
@@ -96,13 +100,6 @@ export default {
     },
     hasNextPage() {
       return this.filteredTickers.length > this.endIndex;
-    },
-    pageStateOptions() {
-      this.$emit("clear-filter", this.filter);
-      return {
-        filter: this.filter,
-        page: this.page
-      };
     }
   }
 };

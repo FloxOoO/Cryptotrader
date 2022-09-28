@@ -16,6 +16,9 @@ export default {
       type: String
     }
   },
+  emits: {
+    add: (value) => typeof value === "string"
+  },
   data() {
     return {
       wordsHelpSearch: [],
