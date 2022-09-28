@@ -49,7 +49,7 @@ export default {
     }
   },
   emits: {
-    "add-ticker": (value) => typeof value === "boolean" && value.length > 0
+    "add-ticker": (value) => typeof value === "string" && value.length > 0
   },
   data() {
     return { ticker: "" };
