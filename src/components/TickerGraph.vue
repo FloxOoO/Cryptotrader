@@ -49,7 +49,6 @@
   </section>
 </template>
 <script>
-import { loadGraphData } from "@/api.js";
 import DeleteGraphButton from "./DeleteGraphButton.vue";
 export default {
   components: {
@@ -58,12 +57,6 @@ export default {
   props: {
     selectedTicker: {
       type: Object
-    },
-    tickers: {
-      type: Array,
-      default: function () {
-        return [];
-      }
     }
   },
   data() {
@@ -74,13 +67,6 @@ export default {
       countBar: 1
     };
   },
-  created() {
-    this.tickers.forEach((ticker) => {
-      loadGraphData(ticker.name, (newPrice, time) =>
-        this.drawGraph(ticker.name, newPrice, time)
-      );
-    });
-  },
   mounted() {
     window.addEventListener("resize", this.resizeGraph);
   },
@@ -90,7 +76,23 @@ export default {
   watch: {
     selectedTicker() {
       this.graph = [];
-      this.drawGraph;
+    },
+    priceUpdate() {
+      this.graph.push({
+        height: this.selectedTicker.price,
+        width: this.selectedTicker.time
+      });
+      if (this.$refs.graphBar) {
+        this.widthGraph = 0;
+        this.countBar = 0;
+        this.$refs.graphBar.forEach((x) => {
+          this.widthGraph += Math.ceil(x.clientWidth) + 2;
+          this.countBar++;
+        });
+      }
+      if (this.$refs.graph?.clientWidth < this.widthGraph) {
+        this.graph.shift();
+      }
     }
   },
   methods: {
@@ -110,26 +112,6 @@ export default {
           this.graph.length - this.maxGraphElements
         );
       }
-    },
-    drawGraph(tickerName, price, time) {
-      this.tickers
-        .filter((t) => t.name === tickerName)
-        .forEach((t) => {
-          if (t === this.selectedTicker) {
-            this.graph.push({ height: price, width: time });
-            if (this.$refs.graphBar) {
-              this.widthGraph = 0;
-              this.countBar = 0;
-              this.$refs.graphBar.forEach((x) => {
-                this.widthGraph += Math.ceil(x.clientWidth) + 2;
-                this.countBar++;
-              });
-            }
-            if (this.$refs.graph.clientWidth < this.widthGraph) {
-              this.graph.shift();
-            }
-          }
-        });
     }
   },
   computed: {
@@ -169,6 +151,12 @@ export default {
     },
     widthBar() {
       return this.widthGraph / this.countBar;
+    },
+    priceUpdate() {
+      if (this.selectedTicker) {
+        return this.selectedTicker.price;
+      }
+      return null;
     }
   }
 };

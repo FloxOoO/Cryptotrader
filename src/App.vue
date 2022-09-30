@@ -54,15 +54,15 @@ export default {
     if (tickersData) {
       this.tickers = JSON.parse(tickersData);
       this.tickers.forEach((ticker) => {
-        subscribeToTicker(ticker.name, (newPrice, valid) =>
-          this.updateTicker(ticker.name, newPrice, valid)
+        subscribeToTicker(ticker.name, (newPrice, valid, time) =>
+          this.updateTicker(ticker.name, newPrice, valid, time)
         );
       });
     }
     // setInterval(this.updateTickers, 5000);
   },
   methods: {
-    updateTicker(tickerName, price, valid) {
+    updateTicker(tickerName, price, valid, time) {
       this.tickers
         .filter((t) => t.name === tickerName)
         .forEach((t) => {
@@ -70,6 +70,7 @@ export default {
             t.price = price;
           }
           t.valid = valid;
+          t.time = time;
         });
     },
     add(ticker) {
@@ -77,7 +78,8 @@ export default {
         const currentTicker = {
           name: ticker.toUpperCase(),
           price: "-",
-          valid: true
+          valid: true,
+          time: 0
         };
         this.addTickerCheck = this.tickers.some(
           (x) => x.name === ticker.toUpperCase()
@@ -87,8 +89,8 @@ export default {
           return;
         }
         this.tickers = [...this.tickers, currentTicker];
-        subscribeToTicker(currentTicker.name, (newPrice, valid) =>
-          this.updateTicker(currentTicker.name, newPrice, valid)
+        subscribeToTicker(currentTicker.name, (newPrice, valid, time) =>
+          this.updateTicker(currentTicker.name, newPrice, valid, time)
         );
       }
     },

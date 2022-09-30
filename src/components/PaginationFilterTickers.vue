@@ -76,7 +76,6 @@
   <hr class="w-full border-t border-gray-600 my-4" />
   <ticker-graph
     :selected-ticker="selectedTicker"
-    :tickers="tickers"
     @delete-select="deleteSelect"
   />
 </template>

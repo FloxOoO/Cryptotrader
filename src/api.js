@@ -1,7 +1,6 @@
 const API_KEY =
   "4f90b4377134ca30e7f7435af76b95ac3497a716b5549401b16beb29fd5f3018";
 const tickersHandlers = new Map();
-const tickersHandlersGraph = new Map();
 var bc = new BroadcastChannel("updatePrice");
 let connect = false;
 // На API
@@ -59,14 +58,10 @@ socket.addEventListener("message", (e) => {
     return;
   }
   const handlers = tickersHandlers.get(currency) ?? [];
-  const handlersGraph = tickersHandlersGraph.get(currency) ?? [];
   handlers.forEach((fn) => {
-    fn(newPrice, valid);
+    fn(newPrice, valid, time);
     bc.postMessage({ currency, newPrice, valid });
     connect = true;
-  });
-  handlersGraph.forEach((fn) => {
-    fn(newPrice, time);
   });
 });
 if (connect === false) {
@@ -118,8 +113,4 @@ export const loadCoinlist = (Coinlist) => {
     .then((rawData) =>
       Object.keys(rawData.Data).forEach((key) => Coinlist.push(key))
     );
-};
-export const loadGraphData = (ticker, cb) => {
-  const subscribes = tickersHandlersGraph.get(ticker) || [];
-  tickersHandlersGraph.set(ticker, [...subscribes, cb]);
 };
