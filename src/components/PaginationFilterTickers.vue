@@ -74,12 +74,19 @@
     </template>
   </dl>
   <hr class="w-full border-t border-gray-600 my-4" />
+  <ticker-graph
+    :selected-ticker="selectedTicker"
+    :tickers="tickers"
+    @delete-select="deleteSelect"
+  />
 </template>
 <script>
 import URL from "./URL.vue";
+import TickerGraph from "./TickerGraph.vue";
 export default {
   components: {
-    URL
+    URL,
+    TickerGraph
   },
   props: {
     tickers: {
@@ -102,6 +109,9 @@ export default {
     this.pageFromUrl();
   },
   methods: {
+    deleteSelect(flag) {
+      if (flag) this.selectedTicker = flag;
+    },
     filterFromUrl(filter) {
       filter ? (this.filter = filter) : this.filter;
     },
@@ -121,7 +131,8 @@ export default {
       }
     },
     select(ticker) {
-      this.selectedTicker = ticker;
+      if (ticker.valid) this.selectedTicker = ticker;
+      this.$emit("selected-ticker", this.selectedTicker);
     }
   },
   watch: {
