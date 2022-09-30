@@ -74,10 +74,12 @@
     </template>
   </dl>
   <hr class="w-full border-t border-gray-600 my-4" />
-  <ticker-graph
-    :selected-ticker="selectedTicker"
-    @delete-select="deleteSelect"
-  />
+  <template v-if="selectedTicker">
+    <ticker-graph
+      :selected-ticker="selectedTicker"
+      @delete-select="deleteSelect"
+    />
+  </template>
 </template>
 <script>
 import URL from "./URL.vue";
@@ -109,7 +111,7 @@ export default {
   },
   methods: {
     deleteSelect(flag) {
-      if (flag) this.selectedTicker = flag;
+      if (flag) this.selectedTicker = null;
     },
     filterFromUrl(filter) {
       filter ? (this.filter = filter) : this.filter;

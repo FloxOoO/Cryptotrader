@@ -1,6 +1,6 @@
 <template>
   <button
-    @click="$emit('closed-graph', null)"
+    @click="$emit('closed-graph', true)"
     type="button"
     class="absolute top-0 right-0"
   >

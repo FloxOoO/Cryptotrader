@@ -59,7 +59,6 @@ export default {
         );
       });
     }
-    // setInterval(this.updateTickers, 5000);
   },
   methods: {
     updateTicker(tickerName, price, valid, time) {
@@ -107,7 +106,7 @@ export default {
   },
   computed: {
     tooManyTickersAdded() {
-      return this.tickers.length > 4;
+      return this.tickers.length > 30;
     }
   }
 };
