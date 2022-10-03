@@ -6,7 +6,7 @@
       <add-ticker
         @add-ticker="add"
         :disabled="tooManyTickersAdded"
-        :add-ticker-check="addTickerCheck"
+        :tickers="tickers"
       />
       <template v-if="tickers.length">
         <pagination-filter-tickers
@@ -45,8 +45,7 @@ export default {
   },
   data() {
     return {
-      tickers: [],
-      addTickerCheck: false
+      tickers: []
     };
   },
   created() {
@@ -80,13 +79,6 @@ export default {
           valid: true,
           time: 0
         };
-        this.addTickerCheck = this.tickers.some(
-          (x) => x.name === ticker.toUpperCase()
-        );
-        if (this.addTickerCheck) {
-          this.ticker = "";
-          return;
-        }
         this.tickers = [...this.tickers, currentTicker];
         subscribeToTicker(currentTicker.name, (newPrice, valid, time) =>
           this.updateTicker(currentTicker.name, newPrice, valid, time)

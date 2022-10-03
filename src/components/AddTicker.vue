@@ -44,25 +44,43 @@ export default {
       required: false,
       default: false
     },
-    addTickerCheck: {
-      type: Boolean
+    tickers: {
+      type: Array,
+      default: function () {
+        return [];
+      }
     }
   },
   emits: {
     "add-ticker": (value) => typeof value === "string" && value.length > 0
   },
   data() {
-    return { ticker: "" };
+    return {
+      ticker: "",
+      addTickerCheck: false
+    };
   },
   methods: {
     add(span) {
       if (this.ticker.length === 0) {
         return;
       }
+      this.addTickerCheck = this.tickers.some(
+        (x) => x.name === span.toUpperCase()
+      );
+      if (this.addTickerCheck) {
+        this.ticker = "";
+        return;
+      }
       span
         ? this.$emit("add-ticker", span)
         : this.$emit("add-ticker", this.ticker);
       this.ticker = "";
+    }
+  },
+  watch: {
+    ticker() {
+      setTimeout(() => (this.addTickerCheck = false), 1000);
     }
   }
 };
