@@ -97,7 +97,9 @@ export default {
       }
     }
   },
-  emits: {},
+  emits: {
+    "deleted-ticker": (value) => typeof value === "object"
+  },
   data() {
     return {
       filter: "",
@@ -133,7 +135,6 @@ export default {
     },
     select(ticker) {
       if (ticker.valid) this.selectedTicker = ticker;
-      this.$emit("selected-ticker", this.selectedTicker);
     }
   },
   watch: {

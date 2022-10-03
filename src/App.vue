@@ -1,4 +1,8 @@
 <template>
+  <local-storage-tickers
+    :tickers="tickers"
+    @tickers-data-LS="getTickersFromLS"
+  />
   <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
     <preloader-show />
     <div class="container">
@@ -36,12 +40,14 @@ import { subscribeToTicker, unsubscribeFromTicker } from "./api";
 import AddTicker from "./components/AddTicker.vue";
 import PreloaderShow from "./components/PreloaderShow.vue";
 import PaginationFilterTickers from "./components/PaginationFilterTickers.vue";
+import localStorageTickers from "./components/localStorageTickers.vue";
 export default {
   name: "App",
   components: {
     AddTicker,
     PreloaderShow,
-    PaginationFilterTickers
+    PaginationFilterTickers,
+    localStorageTickers
   },
   data() {
     return {
@@ -49,17 +55,19 @@ export default {
     };
   },
   created() {
-    const tickersData = localStorage.getItem("cryptonomicon-list");
-    if (tickersData) {
-      this.tickers = JSON.parse(tickersData);
-      this.tickers.forEach((ticker) => {
-        subscribeToTicker(ticker.name, (newPrice, valid, time) =>
-          this.updateTicker(ticker.name, newPrice, valid, time)
-        );
-      });
-    }
+    this.getTickersFromLS();
   },
   methods: {
+    getTickersFromLS(tickersData) {
+      if (tickersData) {
+        this.tickers = tickersData;
+        this.tickers.forEach((ticker) => {
+          subscribeToTicker(ticker.name, (newPrice, valid, time) =>
+            this.updateTicker(ticker.name, newPrice, valid, time)
+          );
+        });
+      }
+    },
     updateTicker(tickerName, price, valid, time) {
       this.tickers
         .filter((t) => t.name === tickerName)
@@ -89,11 +97,6 @@ export default {
       if (tickerToRemove)
         this.tickers = this.tickers.filter((t) => t !== tickerToRemove);
       unsubscribeFromTicker(tickerToRemove.name);
-    }
-  },
-  watch: {
-    tickers() {
-      localStorage.setItem("cryptonomicon-list", JSON.stringify(this.tickers));
     }
   },
   computed: {
